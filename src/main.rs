@@ -1,6 +1,10 @@
 #![allow(nonstandard_style)]
 use std::io::ErrorKind;
 
+use sdl2::event::Event;
+use sdl2::keyboard::Scancode::{
+    Num1, Num2, Num3, Num4, A, C, D, E, F, Q, R, S, V, W, X, Z,
+};
 use sdl2::pixels::Color;
 use sdl2::rect::Rect;
 
@@ -52,15 +56,28 @@ fn main() {
     canvas.clear();
     canvas.present();
 
+    let mut event_pump = sdl_context.event_pump().unwrap();
+
     let mut paint_black: Vec<Rect> = Vec::new();
     let mut paint_white: Vec<Rect> = Vec::new();
+
+    let mut keypressed: u8 = 0x10;
 
     /*'running: */
     loop {
         paint_white.clear();
         paint_black.clear();
         chip8.draw_flag = false;
-        chip8.emuCycle(&mut paint_black, &mut paint_white);
+        chip8.input_wait = false;
+
+        for event in event_pump.poll_iter() {
+            keypressed = matchStatements(keypressed, event);
+        }
+
+        chip8.emuCycle(&mut paint_black, &mut paint_white, keypressed);
+
+        keypressed = 0x10;
+
         if chip8.draw_flag {
             if paint_black.is_empty() && paint_white.is_empty() {
                 canvas.set_draw_color(Color::RGB(0x22, 0x23, 0x23));
@@ -81,9 +98,72 @@ fn main() {
             }
             canvas.present();
         }
+        if chip8.input_wait {
+            for event in event_pump.wait_iter() {
+                keypressed = matchStatements(keypressed, event);
+            }
+        }
     }
 }
 
 fn println(string: &str) {
     println!("\x1b[1;31m{string}\x1b[0m");
+}
+
+fn matchStatements(keypressed: u8, event: Event) -> u8 {
+    match event {
+        Event::KeyDown {
+            scancode: Some(Num1),
+            ..
+        } => 1,
+        Event::KeyDown {
+            scancode: Some(Num2),
+            ..
+        } => 2,
+        Event::KeyDown {
+            scancode: Some(Num3),
+            ..
+        } => 3,
+        Event::KeyDown {
+            scancode: Some(Num4),
+            ..
+        } => 0xC,
+        Event::KeyDown {
+            scancode: Some(Q), ..
+        } => 4,
+        Event::KeyDown {
+            scancode: Some(W), ..
+        } => 5,
+        Event::KeyDown {
+            scancode: Some(E), ..
+        } => 6,
+        Event::KeyDown {
+            scancode: Some(R), ..
+        } => 0xD,
+        Event::KeyDown {
+            scancode: Some(A), ..
+        } => 7,
+        Event::KeyDown {
+            scancode: Some(S), ..
+        } => 8,
+        Event::KeyDown {
+            scancode: Some(D), ..
+        } => 9,
+        Event::KeyDown {
+            scancode: Some(F), ..
+        } => 0xE,
+        Event::KeyDown {
+            scancode: Some(Z), ..
+        } => 0xA,
+        Event::KeyDown {
+            scancode: Some(X), ..
+        } => 0,
+        Event::KeyDown {
+            scancode: Some(C), ..
+        } => 0xB,
+        Event::KeyDown {
+            scancode: Some(V), ..
+        } => 0xF,
+        _ => keypressed,
+    }
 }
